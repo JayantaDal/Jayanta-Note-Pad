@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web Notepad</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            background-color: #f0f2f5;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 0 20px;
+        }
+
+        .toolbar {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px 5px 0 0;
+            border: 1px solid #ddd;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .toolbar button {
+            padding: 5px 10px;
+            background-color: #fff;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .toolbar button:hover {
+            background-color: #e9ecef;
+        }
+
+        .toolbar select {
+            padding: 5px;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+        }
+
+        .editor-container {
+            background-color: white;
+            border: 1px solid #ddd;
+            border-top: none;
+            border-radius: 0 0 5px 5px;
+            padding: 20px;
+            min-height: 500px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        #editor {
+            width: 100%;
+            min-height: 450px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+            resize: vertical;
+            font-size: 16px;
+            line-height: 1.5;
+        }
+
+        .status-bar {
+            margin-top: 10px;
+            padding: 5px;
+            background-color: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 14px;
+            color: #666;
+        }
+
+        @media (max-width: 768px) {
+            .toolbar {
+                flex-direction: column;
+            }
+            
+            .toolbar button, .toolbar select {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="toolbar">
+            <button onclick="handleFile('new')">New</button>
+            <button onclick="handleFile('open')">Open</button>
+            <button onclick="handleFile('save')">Save</button>
+            <select id="fontSize" onchange="changeFontSize()">
+                <option value="12">12px</option>
+                <option value="14">14px</option>
+                <option value="16" selected>16px</option>
+                <option value="18">18px</option>
+                <option value="20">20px</option>
+                <option value="24">24px</option>
+            </select>
+            <select id="fontFamily" onchange="changeFontFamily()">
+                <option value="Arial" selected>Arial</option>
+                <option value="Times New Roman">Times New Roman</option>
+                <option value="Courier New">Courier New</option>
+                <option value="Georgia">Georgia</option>
+                <option value="Verdana">Verdana</option>
+            </select>
+            <button onclick="formatText('bold')">Bold</button>
+            <button onclick="formatText('italic')">Italic</button>
+            <button onclick="formatText('underline')">Underline</button>
+            <input type="color" id="textColor" onchange="changeTextColor()" value="#000000">
+        </div>
+
+        <div class="editor-container">
+            <textarea id="editor" spellcheck="true" onkeyup="updateStatus()"></textarea>
+        </div>
+
+        <div class="status-bar">
+            <span id="wordCount">Words: 0</span>
+            <span id="charCount">Characters: 0</span>
+        </div>
+    </div>
+
+    <script>
+        const editor = document.getElementById('editor');
+        let savedContent = '';
+
+        function handleFile(action) {
+            switch(action) {
+                case 'new':
+                    if (editor.value !== savedContent) {
+                        if (confirm('Do you want to save changes?')) {
+                            handleFile('save');
+                        }
+                    }
+                    editor.value = '';
+                    savedContent = '';
+                    updateStatus();
+                    break;
+
+                case 'open':
+                    const fileInput = document.createElement('input');
+                    fileInput.type = 'file';
+                    fileInput.accept = '.txt';
+                    fileInput.onchange = e => {
+                        const file = e.target.files[0];
+                        const reader = new FileReader();
+                        reader.onload = e => {
+                            editor.value = e.target.result;
+                            savedContent = editor.value;
+                            updateStatus();
+                        };
+                        reader.readAsText(file);
+                    };
+                    fileInput.click();
+                    break;
+
+                case 'save':
+                    const text = editor.value;
+                    const blob = new Blob([text], { type: 'text/plain' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'notepad.txt';
+                    a.click();
+                    URL.revokeObjectURL(url);
+                    savedContent = text;
+                    break;
+            }
+        }
+
+        function formatText(format) {
+            const start = editor.selectionStart;
+            const end = editor.selectionEnd;
+            const selectedText = editor.value.substring(start, end);
+            let formattedText = selectedText;
+
+            switch(format) {
+                case 'bold':
+                    formattedText = `**${selectedText}**`;
+                    break;
+                case 'italic':
+                    formattedText = `*${selectedText}*`;
+                    break;
+                case 'underline':
+                    formattedText = `_${selectedText}_`;
+                    break;
+            }
+
+            editor.value = editor.value.substring(0, start) + formattedText + editor.value.substring(end);
+        }
+
+        function changeFontSize() {
+            const size = document.getElementById('fontSize').value;
+            editor.style.fontSize = `${size}px`;
+        }
+
+        function changeFontFamily() {
+            const font = document.getElementById('fontFamily').value;
+            editor.style.fontFamily = font;
+        }
+
+        function changeTextColor() {
+            const color = document.getElementById('textColor').value;
+            editor.style.color = color;
+        }
+
+        function updateStatus() {
+            const text = editor.value;
+            const wordCount = text.trim() ? text.trim().split(/\s+/).length : 0;
+            const charCount = text.length;
+            
+            document.getElementById('wordCount').textContent = `Words: ${wordCount}`;
+            document.getElementById('charCount').textContent = `Characters: ${charCount}`;
+        }
+
+        // Auto-save to localStorage every 30 seconds
+        setInterval(() => {
+            localStorage.setItem('notepadContent', editor.value);
+        }, 30000);
+
+        // Load saved content from localStorage
+        window.onload = () => {
+            const savedContent = localStorage.getItem('notepadContent');
+            if (savedContent) {
+                editor.value = savedContent;
+                updateStatus();
+            }
+        };
+
+        // Warn before leaving if there are unsaved changes
+        window.onbeforeunload = (e) => {
+            if (editor.value !== savedContent) {
+                e.preventDefault();
+                return e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
+            }
+        };
+    </script>
+</body>
+</html>
